@@ -23,8 +23,6 @@ LOCAL_SRC_FILES := Main.cpp \
     Mod/McMod.cpp \
     Mod/Aim.c \
     Mod/Blood.c \
-    Mod/VmHook.c \
-    Mod/VmHookAsm.S \
     Menu/ImGui.cpp \
     Menu/BlurBg.cpp \
     Includes/Utils.cpp \
@@ -39,6 +37,10 @@ LOCAL_SRC_FILES := Main.cpp \
     imgui/imgui_draw.cpp \
     imgui/imgui_tables.cpp \
     imgui/imgui_widgets.cpp
+
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+LOCAL_SRC_FILES += Mod/VmHook.c Mod/VmHookAsm.S
+endif
 
 LOCAL_STATIC_LIBRARIES := Dobby
 include $(BUILD_SHARED_LIBRARY)

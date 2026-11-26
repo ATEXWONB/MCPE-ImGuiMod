@@ -435,6 +435,7 @@ static const char* NbtTypeName(int t);
 
 static uintptr_t CallClone(uintptr_t fn, uintptr_t self)
 {
+#if defined(__aarch64__)
     volatile uintptr_t res = 0;
     uintptr_t outaddr = (uintptr_t)&res;
     __asm__ __volatile__("mov x0, %0\n\tmov x8, %1\n\tblr %2\n\t"
@@ -442,6 +443,13 @@ static uintptr_t CallClone(uintptr_t fn, uintptr_t self)
         : "x0","x1","x2","x3","x4","x5","x6","x7","x8","x9","x10","x11",
           "x12","x13","x14","x15","x16","x17","x30","memory");
     return res;
+#else
+    // 非 ARM64：退化为普通函数调用（该功能在非 arm64 上未适配）
+    typedef uintptr_t (*FnT)(uintptr_t, uintptr_t);
+    uintptr_t out = 0;
+    uintptr_t r = ((FnT)fn)(self, (uintptr_t)&out);
+    return r ? r : out;
+#endif
 }
 
 static uintptr_t FindInventoryNow()

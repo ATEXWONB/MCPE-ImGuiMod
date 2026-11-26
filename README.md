@@ -35,8 +35,12 @@ jni/
   asmjit/      汇编器（x86/arm 两套后端）
   nlohmann/    JSON
   imgui/       Dear ImGui + backends(android / opengl3)
-prebuilt/arm64-v8a/libmcmod.so   已编译好的成品，可直接用
+prebuilt/{arm64-v8a,armeabi-v7a,x86,x86_64}/libmcmod.so   已编译好的四架构成品，可直接用
 ```
+
+## 第三方代码与许可
+
+本项目的第三方组件（Dear ImGui 1.93.1 WIP、Dobby `0932d69`、asmjit 1.13.0、nlohmann/json 3.11.3、xdl、KittyMemoryEx、obfuscate.h、il2cpp 头文件、Roboto 字体）的**上游版本、许可、能否商用**逐条列在 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。一句话：这些库都是 MIT / Apache-2.0 / Zlib，代码层面允许商用，保留声明即可；但把它当商业外挂卖违反 Minecraft EULA，与开源许可无关。
 
 ## 编译
 
@@ -49,7 +53,15 @@ $NDK/ndk-build -j4 \
 # 产物: libs/arm64-v8a/libmcmod.so
 ```
 
-`Application.mk` 里 `APP_ABI := arm64-v8a`。**目前只支持 ARM64**：`VmHookAsm.S` 是 AArch64 汇编，`McMod.cpp` 里也有 ARM64 内联寄存器约束（`x0`/`x1`），改 `APP_ABI=armeabi-v7a` 会直接编译失败。要出 32 位或 x86 版需要重写这部分跳板与内联汇编。
+四个架构都能编（`APP_ABI := arm64-v8a` 改成 `armeabi-v7a` / `x86` / `x86_64` 即可）：
+
+- **arm64-v8a**：完整功能，正常使用。
+- **armeabi-v7a / x86 / x86_64**：可以编译、可以加载，但**功能未适配**。原因有两个，`Android.mk` 与 `McMod.cpp` 里已做条件编译：
+  1. `VmHookAsm.S` 是纯 AArch64 汇编跳板（`stp x0,x1` / `br x16`），只有 arm64-v8a 参与编译；其它架构不编译 `VmHook.c`，虚表 hook 功能不可用。
+  2. `McMod.cpp` 的 `CallClone` 用 ARM64 内联寄存器约束（`x0`/`x8`/`blr`），已用 `#if defined(__aarch64__)` 包起来，其它架构退化为普通 C 调用。
+  3. 更关键的是**所有偏移/虚表地址都是针对 1.26.62 的 arm64 `libminecraftpe.so` 反推的**，32 位或 x86 版游戏里这些硬编码偏移全部不对，所以这些产物只是「架构正确的空壳」，能加载、不会有实际效果。要真正支持需要按对应架构的 so 重新找锚点。
+
+`prebuilt/` 下四个架构的成品都在，验证过 ELF `e_machine`：arm64=0xB7、arm32=0x28、x86_64=0x3E、x86=0x03。
 
 ## 加载方式
 
